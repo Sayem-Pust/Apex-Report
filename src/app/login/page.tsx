@@ -24,9 +24,9 @@ export default function Login() {
   });
 
   return (
-    <section className="overflow-hidden">
+    <section className="overflow-hidden md:h-screen">
       <div className="py-5 h-full">
-        <div className="container mx-auto h-full">
+        <div className="container-fluid mx-auto h-full">
           <div className="flex flex-col items-center h-full gap-6 md:flex-row lg:gap-20">
             {/* First Section: 40% Width */}
             <div className="w-full lg:w-[40%] flex-grow">
@@ -35,7 +35,7 @@ export default function Login() {
                   alt="Peep"
                   src={loginImg}
                   decoding="async"
-                  data-nimg="intrinsic"
+                  data-img="intrinsic"
                   className="object-cover w-full h-full"
                 />
                 <div className="absolute inset-0 flex flex-col items-center justify-between py-10">
