@@ -6,7 +6,6 @@ const Dashboard = () => {
   return (
     <aside className="">
       <div className="m-3">
-        
         <PurchaseModal />
 
         <div className="overflow-x-scroll">
@@ -20,7 +19,7 @@ const Dashboard = () => {
                   Store
                 </th>
                 <th className="font-[600] text-[12px] px-2 py-3 ">
-                  Runner's Name
+                  Runner&apos;s Name
                 </th>
                 <th className="font-[600] text-[12px] px-2 py-3 uppercase">
                   Amount

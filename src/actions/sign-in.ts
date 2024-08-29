@@ -27,13 +27,16 @@ export async function credentialsSignIn(
     identifier,
     password,
   };
-  const authResponse = await fetch("http://127.0.0.1:8000/api/v1/login/", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(requestBody),
-  });
+  const authResponse = await fetch(
+    "https://devapi.propsoft.ai/api/interview/login",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(requestBody),
+    }
+  );
 
   if (!authResponse.ok) {
     return {
@@ -45,11 +48,11 @@ export async function credentialsSignIn(
   const user = await authResponse.json();
 
   const data = {
-    accessToken: user.data.access,
-    name: user.data.name,
-    email: user.data.email,
-    id: user.data.id,
-    image: user.data.image,
+    accessToken: user.access_token,
+    name: user.user_data.first_name,
+    email: user.user_data.email,
+    id: user.user_data.id,
+    // image: user.data.image,
   };
 
   return authenticate.signIn("credentials", data);

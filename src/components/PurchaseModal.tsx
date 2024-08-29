@@ -95,29 +95,34 @@ const PurchaseModal: React.FC = () => {
       <ModalContainer open={open} closeModal={closeModel}>
         <div className="pr_overlay fixed left-0 top-0 h-full w-full overflow-x-hidden overflow-y-auto bg-[rgba(0,0,0,0.5)] z-20">
           <div className="modal_dialog relative w-auto transform-none 2xl:max-w-[1200px] xl:max-w-[1000px] lg:max-w-[950px] md:max-w-[700px] sm:max-w-[500px] xs:max-w-[400px] xxs:max-w-[340px] sm:min-h-[calc(100%_-_3.5rem)] min-h-[calc(100%_-_1rem)] flex items-center my-8 mx-auto">
-            <div className="bg-white relative flex flex-col w-full pointer-events-auto bg-clip-padding rounded-lg p-6">
-              <span
-                className="inline-flex justify-center items-center h-8 w-8 rounded-full bg-black bg-opacity-80 absolute -top-1 -right-1 z-50 cursor-pointer"
-                id="em_close"
-                onClick={closeModel}
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth="2"
-                  stroke="currentColor"
-                  className="w-6 h-6 text-white"
+            <div className="relative flex flex-col w-full pointer-events-auto bg-blue-500 bg-clip-padding rounded-lg">
+              {/* Modal Header */}
+              <div className="flex justify-center items-center p-4 bg-blue-500 text-white rounded-t-lg relative">
+                <h2 className="text-xl font-[600] text-[20px]">Material Purchase</h2>
+                <span
+                  className="inline-flex justify-center items-center h-8 w-8 rounded-full bg-black bg-opacity-80 absolute -top-1 -right-1 z-50 cursor-pointer"
+                  id="em_close"
+                  onClick={closeModel}
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </span>
-              <div className="e_modal_body">
-                <div className="modal-text pt-4">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth="2"
+                    stroke="currentColor"
+                    className="w-6 h-6 text-white"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </span>
+              </div>
+
+              <div className="e_modal_body bg-white rounded-lg p-6">
+                <div className="modal-text">
                   <div className="container mx-auto p-4">
                     <div className="overflow-x-auto">
                       <table className="min-w-full bg-white border border-gray-300 shadow-md">
@@ -130,7 +135,7 @@ const PurchaseModal: React.FC = () => {
                               Store
                             </th>
                             <th className="font-[600] text-[12px] text-[#545454] py-2 px-4 border-b">
-                              Runner's Name
+                              Runner&apos;s Name
                             </th>
                             <th className="font-[600] text-[12px] text-[#545454] py-2 px-4 border-b capitalize">
                               Amount
@@ -147,7 +152,12 @@ const PurchaseModal: React.FC = () => {
                         </thead>
                         <tbody>
                           {rows.map((row, index) => (
-                            <tr key={row.id} className={index % 2 === 0 ? "bg-white" : "bg-[#E5E7EB]"}>
+                            <tr
+                              key={row.id}
+                              className={
+                                index % 2 === 0 ? "bg-white" : "bg-[#E5E7EB]"
+                              }
+                            >
                               <td className="py-2 px-4 border-b">
                                 <input
                                   type="text"
@@ -232,16 +242,28 @@ const PurchaseModal: React.FC = () => {
                               </td>
                             </tr>
                           ))}
+                          <tr>
+                            <td colSpan={5}></td>{" "}
+                            <td className="py-1 px-3 flex justify-end shadow-md">
+                              <button
+                                onClick={addRow}
+                                className="bg-blue-500 text-white py-1 px-3 rounded-full hover:bg-blue-600"
+                              >
+                                <span className="text-xl">+</span>
+                              </button>
+                            </td>
+                            <td></td>{" "}
+                          </tr>
                         </tbody>
                       </table>
-                      <div className="p-2 pr-4 flex justify-end shadow-md">
-                        <button
-                          onClick={addRow}
-                          className="bg-blue-500 text-white py-2 px-4 rounded-full hover:bg-blue-600"
-                        >
-                          <span className="text-xl">+</span>
-                        </button>
-                      </div>
+                    </div>
+                    <div className="flex justify-end mt-4">
+                      <button
+                        // onClick={handleSave}
+                        className="bg-[#2563EB] text-white w-[113px] h-[46px] rounded hover:bg-blue-600 font-[600] text-[14px]"
+                      >
+                        Save
+                      </button>
                     </div>
                   </div>
                 </div>

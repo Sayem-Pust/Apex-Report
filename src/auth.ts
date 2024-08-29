@@ -10,48 +10,34 @@ export const {
 } = NextAuth({
   providers: [
     CredentialsProvider({
-      async authorize(credentials) {
-        const authResponse = await fetch(
-          "http://127.0.0.1:8000/api/users/login/",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(credentials),
-          }
-        );
-        if (!authResponse.ok) {
-          return null;
-        }
-
-        const user = await authResponse.json();
-        // console.log("aaaaaaaaaa", user.data.access);
-
+      async authorize(credentials: any) {
         return {
-          // name: user.data.access,
-          email: "",
-          image: "",
-          id: "aa",
-          token: user.data.access,
+          name: credentials.name,
+          email: credentials.email,
+          // image: credentials.image,
+          id: credentials.id,
+          token: credentials.accessToken,
         };
       },
     }),
   ],
   callbacks: {
-    jwt: async ({ token, user, account, profile }) => {
-      // console.log({ token, user, account, profile });
-
+    jwt: async ({ token, trigger, session, user, account, profile }) => {
+      // console.log(token, user, account, profile);
+      if (trigger === "update" && session?.image) {
+        token.image = session.image;
+      }
       return { ...token, ...user };
     },
     async session({ session, token }: any) {
-      // console.log({ user });
-
       if (session && token) {
-        // session.user.id = user.id;
         session.user.token = token.token;
+        session.user.id = token.id;
       }
       return session;
+    },
+    async redirect({ url, baseUrl, req }: any) {
+      return `${baseUrl}`;
     },
   },
 });
