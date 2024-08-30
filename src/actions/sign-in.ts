@@ -1,13 +1,21 @@
 "use server";
 
 import * as authenticate from "@/auth";
+import { USER_API } from "@/services/api-end-point/users";
+import clientAxios from "@/services/config";
 import { z } from "zod";
 
+const loginUserSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(8),
+  // .regex(
+  //   /^(?=.*[0-9])(?=.*[a-zA-Z])([a-zA-Z0-9]+)$/,
+  //   "password must contains at least one character and one number"
+  // ),
+});
 interface CreateUserFormState {
   errors: {
-    name?: string[];
     email?: string[];
-    phone?: string[];
     password?: string[];
     _form?: string[];
   };
@@ -15,48 +23,39 @@ interface CreateUserFormState {
 
 export async function credentialsSignIn(
   formState: CreateUserFormState,
-  formData: FormData,
-  additionalData?: { phone: string }
+  formData: FormData
 ): Promise<CreateUserFormState> {
-  const email = formData?.get("identifier") as string;
-  const password = formData?.get("password") as string;
-  console.log(email, password);
-  const identifier =
-    additionalData?.phone || (formData?.get("identifier") as string);
+  const result = loginUserSchema.safeParse({
+    email: formData.get("email"),
+    password: formData.get("password"),
+  });
+  if (!result.success) {
+    return {
+      errors: result.error.flatten().fieldErrors,
+    };
+  }
   const requestBody = {
-    identifier,
-    password,
+    email: result.data.email,
+    password: result.data.password,
   };
-  const authResponse = await fetch(
-    "https://devapi.propsoft.ai/api/interview/login",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(requestBody),
-    }
-  );
+  try {
+    const user = await clientAxios.post(USER_API.user_signin, requestBody);
 
-  if (!authResponse.ok) {
+    const data = {
+      accessToken: user.data.access_token,
+      name: user.data.user_data.first_name,
+      email: user.data.user_data.email,
+      id: user.data.user_data.id,
+    };
+
+    return authenticate.signIn("credentials", data);
+  } catch (error) {
+    console.log(error);
+
     return {
       errors: {
         _form: ["Invalid Credentials"],
       },
     };
   }
-  const user = await authResponse.json();
-
-  const data = {
-    accessToken: user.access_token,
-    name: user.user_data.first_name,
-    email: user.user_data.email,
-    id: user.user_data.id,
-    // image: user.data.image,
-  };
-
-  return authenticate.signIn("credentials", data);
-  // return auth.signIn("credentials", data);
 }
-
-

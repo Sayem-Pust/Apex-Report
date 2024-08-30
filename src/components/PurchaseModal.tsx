@@ -2,8 +2,19 @@
 import React, { useState } from "react";
 import ModalContainer from "./ModalContainer";
 import DatePicker from "react-datepicker";
+import { ToastContainer, toast } from "react-toastify";
+import clientAxios from "@/services/config";
+import { MATERIALS_API } from "@/services/api-end-point/materials";
 
 import "react-datepicker/dist/react-datepicker.css";
+import "react-toastify/dist/ReactToastify.css";
+import { ExtraParams } from "@/models/materialsModel";
+import { useSession } from "next-auth/react";
+
+interface PageProps {
+  fetchMaterialsList: (params: ExtraParams) => Promise<void>;
+  setLoading: React.Dispatch<React.SetStateAction<boolean>>;
+}
 
 interface Row {
   id: number;
@@ -15,8 +26,18 @@ interface Row {
   card_number: number;
 }
 
-const PurchaseModal: React.FC = () => {
+interface RowErrors {
+  line_item_name?: string;
+  store?: string;
+  runners_name?: string;
+  transaction_date?: string;
+  amount?: string;
+  card_number?: string;
+}
+
+const PurchaseModal: React.FC<PageProps> = ({ fetchMaterialsList, setLoading }) => {
   const [open, setOpen] = useState(false);
+  const [errors, setErrors] = useState<{ [key: number]: RowErrors }>({});
   const [rows, setRows] = useState<Row[]>([
     {
       id: Date.now(),
@@ -27,16 +48,25 @@ const PurchaseModal: React.FC = () => {
       card_number: 0,
       transaction_date: null,
     },
-    {
-      id: Date.now() + 1, // Ensure unique ID
-      line_item_name: "",
-      store: "",
-      runners_name: "",
-      amount: 0,
-      card_number: 0,
-      transaction_date: null,
-    },
   ]);
+
+  const session: any = useSession();
+
+  const validateRow = (row: Row) => {
+    const newErrors: RowErrors = {};
+
+    if (!row.line_item_name)
+      newErrors.line_item_name = "Item name is required.";
+    if (!row.store) newErrors.store = "Store is required.";
+    if (!row.runners_name)
+      newErrors.runners_name = "Runner's name is required.";
+    if (row.amount <= 0) newErrors.amount = "Amount must be greater than 0.";
+    if (row.card_number.toString().length !== 5)
+      newErrors.card_number = "Card number must be 5 digits.";
+    if (!row.transaction_date) newErrors.transaction_date = "Date is required.";
+
+    return newErrors;
+  };
 
   const handleInputChange = (id: number, field: keyof Row, value: string) => {
     const updatedRows = rows.map((row) =>
@@ -67,9 +97,18 @@ const PurchaseModal: React.FC = () => {
   const handleDateChange =
     (id: number, field: keyof Row) => (date: Date | null) => {
       if (date) {
-        handleInputChange(id, field, date.toISOString().split("T")[0]);
+        const formattedDate = `${(date.getMonth() + 1)
+          .toString()
+          .padStart(2, "0")}-${date
+          .getDate()
+          .toString()
+          .padStart(2, "0")}-${date.getFullYear()}`;
+        handleInputChange(id, field, formattedDate);
+      } else {
+        handleInputChange(id, field, "");
       }
     };
+
 
   const deleteRow = (id: number) => {
     setRows(rows.filter((row) => row.id !== id));
@@ -79,15 +118,69 @@ const PurchaseModal: React.FC = () => {
     setOpen(false);
   };
 
+  const handleSave = async () => {
+    let valid = true;
+    setLoading(true);
+    const newErrors: { [key: number]: RowErrors } = {};
+
+    rows.forEach((row) => {
+      const rowErrors = validateRow(row);
+      if (Object.keys(rowErrors).length > 0) {
+        newErrors[row.id] = rowErrors;
+        valid = false;
+      }
+    });
+
+    setErrors(newErrors);
+
+    if (valid) {
+      // Save logic here
+      console.log(rows);
+      ("use server");
+      try {
+        const config = {
+          headers: { Authorization: `Bearer ${session?.data?.user?.token}` },
+        };
+        await clientAxios.post(
+          `${MATERIALS_API.fetch_post_materials_list}`,
+          { material_purchase: rows },
+          config
+        );
+        fetchMaterialsList({ page: 1 });
+        setRows([
+          {
+            id: Date.now(),
+            line_item_name: "",
+            store: "",
+            runners_name: "",
+            amount: 0,
+            card_number: 0,
+            transaction_date: null,
+          },
+        ]);
+        toast.success("Purchases form submitted successfully");
+        closeModel();
+        setLoading(false);
+      } catch (error) {
+        console.log(error);
+        setLoading(false);
+      }
+    } else {
+      console.log("Validation errors. Please fix the issues.");
+      setLoading(false);
+    }
+  };
+
   return (
     <div>
+      <ToastContainer />
       <div className="flex justify-between items-center">
-        <p className="text-start text-[#2563EB] text-[36px] font-[600]">
+        <p className="text-start text-[#2563EB] text-base md:text-[36px] font-[600]">
           Material Purchase
         </p>
         <button
           onClick={() => setOpen(true)}
-          className="mt-0 lg:!mt-10 bg-blue-500 text-white py-3 px-6 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-75 disabled:bg-gray-400"
+          className="mt-0 text-sm md:text-base lg:!mt-10 bg-blue-500 text-white py-3 px-2 md:px-6 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-75 disabled:bg-gray-400"
         >
           Add Material Purchase
         </button>
@@ -98,7 +191,9 @@ const PurchaseModal: React.FC = () => {
             <div className="relative flex flex-col w-full pointer-events-auto bg-blue-500 bg-clip-padding rounded-lg">
               {/* Modal Header */}
               <div className="flex justify-center items-center p-4 bg-blue-500 text-white rounded-t-lg relative">
-                <h2 className="text-xl font-[600] text-[20px]">Material Purchase</h2>
+                <h2 className="text-xl font-[600] text-[20px]">
+                  Material Purchase
+                </h2>
                 <span
                   className="inline-flex justify-center items-center h-8 w-8 rounded-full bg-black bg-opacity-80 absolute -top-1 -right-1 z-50 cursor-pointer"
                   id="em_close"
@@ -158,64 +253,122 @@ const PurchaseModal: React.FC = () => {
                                 index % 2 === 0 ? "bg-white" : "bg-[#E5E7EB]"
                               }
                             >
-                              <td className="py-2 px-4 border-b">
-                                <input
-                                  type="text"
-                                  value={row.line_item_name}
-                                  onChange={handleChange(
-                                    row.id,
-                                    "line_item_name"
+                              <td className="py-2 px-4 border-b align-top">
+                                <div className="flex flex-col">
+                                  <input
+                                    type="text"
+                                    value={row.line_item_name}
+                                    onChange={handleChange(
+                                      row.id,
+                                      "line_item_name"
+                                    )}
+                                    className="w-full min-w-[80px] px-2 py-1 font-[600] text-[12px] text-[#545454] border border-gray-300 rounded"
+                                  />
+                                  {errors[row.id]?.line_item_name && (
+                                    <p className="text-red-500 text-xs mt-1">
+                                      {errors[row.id].line_item_name}
+                                    </p>
                                   )}
-                                  className="w-full min-w-[80px] px-2 py-1 font-[600] text-[12px] text-[#545454] border border-gray-300 rounded"
-                                />
+                                </div>
                               </td>
-                              <td className="py-2 px-4 border-b">
-                                <input
-                                  type="text"
-                                  value={row.store}
-                                  onChange={handleChange(row.id, "store")}
-                                  className="w-full min-w-[80px] px-2 py-1 font-[600] text-[12px] text-[#545454] border border-gray-300 rounded"
-                                />
-                              </td>
-                              <td className="py-2 px-4 border-b">
-                                <input
-                                  type="text"
-                                  value={row.runners_name}
-                                  onChange={handleChange(
-                                    row.id,
-                                    "runners_name"
+                              <td className="py-2 px-4 border-b align-top">
+                                <div className="flex flex-col">
+                                  <input
+                                    type="text"
+                                    value={row.store}
+                                    onChange={handleChange(row.id, "store")}
+                                    className="w-full min-w-[80px] px-2 py-1 font-[600] text-[12px] text-[#545454] border border-gray-300 rounded"
+                                  />
+                                  {errors[row.id]?.store && (
+                                    <p className="text-red-500 text-xs mt-1">
+                                      {errors[row.id].store}
+                                    </p>
                                   )}
-                                  className="w-full min-w-[80px] px-2 py-1 font-[600] text-[12px] text-[#545454] border border-gray-300 rounded"
-                                />
+                                </div>
                               </td>
-                              <td className="py-2 px-4 border-b flex justify-center items-center">
-                                $
-                                <input
-                                  type="number"
-                                  value={row.amount}
-                                  onChange={handleChange(row.id, "amount")}
-                                  className="w-full min-w-[80px] px-2 py-1 font-[600] text-[12px] text-[#545454] border border-gray-300 rounded"
-                                />
-                              </td>
-                              <td className="py-2 px-4 border-b">
-                                <input
-                                  type="number"
-                                  value={row.card_number}
-                                  onChange={handleChange(row.id, "card_number")}
-                                  className="w-full min-w-[80px] px-2 py-1 font-[600] text-[12px] text-[#545454] border border-gray-300 rounded"
-                                />
-                              </td>
-                              <td className="py-2 px-4 border-b">
-                                <DatePicker
-                                  className="w-full min-w-[80px] pl-2 py-1 font-[600] text-[12px] text-[#545454] border border-gray-300 rounded text-sm"
-                                  showIcon
-                                  placeholderText="Select Date"
-                                  selected={row.transaction_date}
-                                  onChange={handleDateChange(
-                                    row.id,
-                                    "transaction_date"
+                              <td className="py-2 px-4 border-b align-top">
+                                <div className="flex flex-col">
+                                  <input
+                                    type="text"
+                                    value={row.runners_name}
+                                    onChange={handleChange(
+                                      row.id,
+                                      "runners_name"
+                                    )}
+                                    className="w-full min-w-[80px] px-2 py-1 font-[600] text-[12px] text-[#545454] border border-gray-300 rounded"
+                                  />
+                                  {errors[row.id]?.runners_name && (
+                                    <p className="text-red-500 text-xs mt-1">
+                                      {errors[row.id].runners_name}
+                                    </p>
                                   )}
-                                />
+                                </div>
+                              </td>
+                              <td className="py-2 px-4 border-b align-top">
+                                <div className="flex flex-col">
+                                  <div className="flex items-center">
+                                    <span className="text-[#545454] font-[600] text-[12px] mr-1">
+                                      $
+                                    </span>
+                                    <input
+                                      type="number"
+                                      min={0}
+                                      onKeyDown={(e) => {
+                                        if (e.key === "-" || e.key === "e") {
+                                          e.preventDefault();
+                                        }
+                                      }}
+                                      value={row.amount}
+                                      onChange={handleChange(row.id, "amount")}
+                                      className="w-full min-w-[80px] px-2 py-1 font-[600] text-[12px] text-[#545454] border border-gray-300 rounded"
+                                    />
+                                  </div>
+                                  {errors[row.id]?.amount && (
+                                    <p className="text-red-500 text-xs mt-1">
+                                      {errors[row.id].amount}
+                                    </p>
+                                  )}
+                                </div>
+                              </td>
+
+                              <td className="py-2 px-4 border-b align-top">
+                                <div className="flex flex-col">
+                                  <input
+                                    type="number"
+                                    value={row.card_number}
+                                    onChange={(e) => {
+                                      const value = e.target.value;
+                                      if (value.length <= 5) {
+                                        handleChange(row.id, "card_number")(e);
+                                      }
+                                    }}
+                                    className="w-full min-w-[80px] px-2 py-1 font-[600] text-[12px] text-[#545454] border border-gray-300 rounded"
+                                  />
+                                  {errors[row.id]?.card_number && (
+                                    <p className="text-red-500 text-xs mt-1">
+                                      {errors[row.id].card_number}
+                                    </p>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="py-2 px-4 border-b align-top">
+                                <div className="flex flex-col">
+                                  <DatePicker
+                                    className="w-full min-w-[80px] pl-2 py-1 font-[600] text-[12px] text-[#545454] border border-gray-300 rounded text-sm"
+                                    showIcon
+                                    placeholderText="Select Date"
+                                    selected={row.transaction_date}
+                                    onChange={handleDateChange(
+                                      row.id,
+                                      "transaction_date"
+                                    )}
+                                  />
+                                  {errors[row.id]?.transaction_date && (
+                                    <p className="text-red-500 text-xs mt-1">
+                                      {errors[row.id].transaction_date}
+                                    </p>
+                                  )}
+                                </div>
                               </td>
                               <td className="py-2 border-b text-center">
                                 <button
@@ -259,7 +412,7 @@ const PurchaseModal: React.FC = () => {
                     </div>
                     <div className="flex justify-end mt-4">
                       <button
-                        // onClick={handleSave}
+                        onClick={handleSave}
                         className="bg-[#2563EB] text-white w-[113px] h-[46px] rounded hover:bg-blue-600 font-[600] text-[14px]"
                       >
                         Save
